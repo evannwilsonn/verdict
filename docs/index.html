@@ -47,7 +47,7 @@ button{font:inherit;color:inherit}
 
 /* corner stickers instead of a nav bar */
 .stickers{position:absolute;top:18px;right:28px;z-index:3;display:flex;align-items:center;gap:10px}
-.badge{width:86px;height:86px;border-radius:50%;background:var(--pink);color:#1a0b14;display:grid;place-content:center;text-align:center;transform:rotate(12deg);font:900 13px/1 var(--display);font-stretch:120%;text-transform:uppercase}
+.badge{box-sizing:border-box;width:86px;height:86px;padding:12px;border-radius:50%;background:var(--pink);color:#1a0b14;display:grid;place-content:center;text-align:center;transform:rotate(12deg);font:900 13px/1 var(--display);font-stretch:120%;text-transform:uppercase}
 .badge b{display:block;font-size:30px;letter-spacing:-.02em}
 .stickers a,.stickers button{border:2px solid var(--text);background:var(--paper);padding:6px 11px 5px;font:600 12px var(--mono);text-decoration:none;cursor:pointer}
 .stickers a{transform:rotate(-3deg)} .stickers button{transform:rotate(2deg)}
@@ -59,7 +59,7 @@ h1 .ghost{position:absolute;inset:0;color:var(--pink);transform:translate(.035em
 h1 .l2{display:block;padding-left:.55em}
 .dots{position:absolute;left:-90px;top:120px;width:300px;height:300px;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle,var(--pink) 1.6px,transparent 2px) 0 0/9px 9px;opacity:.4;mix-blend-mode:var(--blend);z-index:-1}
-.spine{position:absolute;right:-4px;top:auto;bottom:0;writing-mode:vertical-rl;font:400 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.spine{position:absolute;right:-4px;top:auto;bottom:0;writing-mode:vertical-rl;font:400 12px var(--mono);letter-spacing:.05em;color:var(--soft)}
 .deck{margin:26px 0 0 auto;max-width:34em;font-size:18px;color:var(--soft);text-wrap:pretty;padding-right:24px}
 .deck b{color:var(--text)}
 
@@ -92,7 +92,7 @@ h1 .l2{display:block;padding-left:.55em}
 .stampbox{grid-column:8/13;grid-row:1;margin-top:120px;margin-left:-30px;position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
 .stamp{width:min(330px,100%);aspect-ratio:1;transform:rotate(var(--sr,-9deg));transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .2s;color:var(--faint);filter:url(#ink)}
 .stamp.pos{color:var(--blue)} .stamp.neg{color:var(--pink)}
-.stamp.idle{opacity:.55}
+.stamp.idle{opacity:.8}
 .stamp.thump{animation:thump .38s cubic-bezier(.22,1,.36,1)}
 @keyframes thump{0%{transform:rotate(var(--sr)) scale(1.35);opacity:0}60%{opacity:1}100%{transform:rotate(var(--sr)) scale(1)}}
 .stamp text{fill:currentColor}
@@ -180,7 +180,7 @@ td:first-child{font:500 14.5px var(--body)}
 @media (max-width:600px){
   .page-w{padding:0 16px}
   .stickers{right:16px;top:10px}
-  .badge{width:64px;height:64px;font-size:10px} .badge b{font-size:22px}
+  .badge{width:64px;height:64px;padding:9px;font-size:10px} .badge b{font-size:22px}
   .stickers a{display:none}
   .poster{padding-top:92px}
   .spine{display:none}
