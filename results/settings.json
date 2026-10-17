@@ -1,0 +1,21 @@
+{
+  "seed": 2026,
+  "validation": 2000,
+  "test": 25000,
+  "model": "Xenova/distilbert-base-uncased-finetuned-sst-2-english",
+  "dtype": "q8",
+  "bayes": {
+    "alpha": 0.5,
+    "bigrams": true,
+    "binary": true,
+    "negation": false
+  },
+  "strategy": "headTail",
+  "threshold": -0.977,
+  "blend": {
+    "weight": 0.15,
+    "threshold": -1.9299
+  },
+  "longReviewTokens": 510,
+  "testLongShare": 0.1234
+}

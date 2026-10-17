@@ -1,0 +1,170 @@
+[
+  {
+    "alpha": 0.1,
+    "bigrams": false,
+    "binary": false,
+    "negation": false,
+    "accuracy": 0.848
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": false,
+    "binary": false,
+    "negation": true,
+    "accuracy": 0.8405
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": false,
+    "binary": true,
+    "negation": false,
+    "accuracy": 0.853
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": false,
+    "binary": true,
+    "negation": true,
+    "accuracy": 0.8505
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": true,
+    "binary": false,
+    "negation": false,
+    "accuracy": 0.8735
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": true,
+    "binary": false,
+    "negation": true,
+    "accuracy": 0.876
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": true,
+    "binary": true,
+    "negation": false,
+    "accuracy": 0.8805
+  },
+  {
+    "alpha": 0.1,
+    "bigrams": true,
+    "binary": true,
+    "negation": true,
+    "accuracy": 0.878
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": false,
+    "binary": false,
+    "negation": false,
+    "accuracy": 0.848
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": false,
+    "binary": false,
+    "negation": true,
+    "accuracy": 0.838
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": false,
+    "binary": true,
+    "negation": false,
+    "accuracy": 0.854
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": false,
+    "binary": true,
+    "negation": true,
+    "accuracy": 0.8495
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": true,
+    "binary": false,
+    "negation": false,
+    "accuracy": 0.876
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": true,
+    "binary": false,
+    "negation": true,
+    "accuracy": 0.8765
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": true,
+    "binary": true,
+    "negation": false,
+    "accuracy": 0.8845
+  },
+  {
+    "alpha": 0.5,
+    "bigrams": true,
+    "binary": true,
+    "negation": true,
+    "accuracy": 0.88
+  },
+  {
+    "alpha": 1,
+    "bigrams": false,
+    "binary": false,
+    "negation": false,
+    "accuracy": 0.8455
+  },
+  {
+    "alpha": 1,
+    "bigrams": false,
+    "binary": false,
+    "negation": true,
+    "accuracy": 0.838
+  },
+  {
+    "alpha": 1,
+    "bigrams": false,
+    "binary": true,
+    "negation": false,
+    "accuracy": 0.8535
+  },
+  {
+    "alpha": 1,
+    "bigrams": false,
+    "binary": true,
+    "negation": true,
+    "accuracy": 0.8475
+  },
+  {
+    "alpha": 1,
+    "bigrams": true,
+    "binary": false,
+    "negation": false,
+    "accuracy": 0.873
+  },
+  {
+    "alpha": 1,
+    "bigrams": true,
+    "binary": false,
+    "negation": true,
+    "accuracy": 0.8745
+  },
+  {
+    "alpha": 1,
+    "bigrams": true,
+    "binary": true,
+    "negation": false,
+    "accuracy": 0.8805
+  },
+  {
+    "alpha": 1,
+    "bigrams": true,
+    "binary": true,
+    "negation": true,
+    "accuracy": 0.878
+  }
+]

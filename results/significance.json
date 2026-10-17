@@ -1,0 +1,20 @@
+[
+  {
+    "comparison": "Naive Bayes vs DistilBERT head",
+    "onlyFirstRight": 1640,
+    "onlySecondRight": 2359,
+    "p": 4.99e-30
+  },
+  {
+    "comparison": "DistilBERT head vs headTail",
+    "onlyFirstRight": 161,
+    "onlySecondRight": 269,
+    "p": 2.15e-7
+  },
+  {
+    "comparison": "DistilBERT headTail vs blend",
+    "onlyFirstRight": 440,
+    "onlySecondRight": 849,
+    "p": 2.05e-30
+  }
+]

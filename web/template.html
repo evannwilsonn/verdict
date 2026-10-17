@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verdict sentiment zine</title>
+<meta name="description" content="Hand in a movie review and a DistilBERT model, running in your browser, stamps a verdict on it and marks up the sentences that decided it.">
+<meta property="og:title" content="Verdict sentiment zine">
+<meta property="og:description" content="Did they like it? A sentiment model that runs in your browser, marks up the review, and shows how it scored on 25,000 IMDB reviews.">
+<meta name="theme-color" content="#fbfbf8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121318" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23fbfbf8'/%3E%3Ccircle cx='13' cy='16' r='9' fill='%23ff48b0' fill-opacity='.9'/%3E%3Ccircle cx='19' cy='16' r='9' fill='%230078bf' fill-opacity='.85' style='mix-blend-mode:multiply'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..150,500..900&family=Caveat:wght@600;700&family=Karla:ital,wght@0,400;0,500;0,700;1,400&family=Martian+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Verdict tokens. See web/DESIGN.md before changing these. */
+:root{
+  --paper:#fbfbf8;--slip:#f2f1ea;--text:#1b2f6e;--soft:#3d4f86;--faint:#56659a;--rule:#c9cfe2;
+  --blue:#0078bf;--pink:#ff48b0;--pink-ink:#c2187a;--blend:multiply;--focus:#111;
+  --c-short:#0078bf;--c-long:#e0399a; /* chart inks, validated for colour-blind separation on this paper */
+  --display:"Anybody","Arial Black",sans-serif;
+  --body:"Karla",system-ui,sans-serif;
+  --mono:"Martian Mono",ui-monospace,monospace;
+  --hand:"Caveat","Comic Sans MS",cursive;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121318;--slip:#1c1e27;--text:#e6eaf7;--soft:#b9c1dc;--faint:#98a2c4;--rule:#323648;
+  --blue:#43a6ff;--pink:#ff5cbc;--pink-ink:#ff8fd0;--blend:screen;--focus:#fff;--c-short:#2f8de0;--c-long:#e2449f;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#121318;--slip:#1c1e27;--text:#e6eaf7;--soft:#b9c1dc;--faint:#98a2c4;--rule:#323648;
+  --blue:#43a6ff;--pink:#ff5cbc;--pink-ink:#ff8fd0;--blend:screen;--focus:#fff;--c-short:#2f8de0;--c-long:#e2449f;color-scheme:dark;}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--text);font:400 16.5px/1.55 var(--body)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.07;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:inherit;text-decoration-color:var(--pink);text-decoration-thickness:2px;text-underline-offset:3px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.skip,.sr{position:absolute;left:-999px}
+.skip{top:8px;background:var(--text);color:var(--paper);padding:6px 10px;z-index:10}
+.skip:focus{left:8px}
+.page-w{max-width:1200px;margin:0 auto;padding:0 28px;position:relative}
+
+/* corner stickers instead of a nav bar */
+.stickers{position:absolute;top:18px;right:28px;z-index:3;display:flex;align-items:center;gap:10px}
+.badge{width:86px;height:86px;border-radius:50%;background:var(--pink);color:#1a0b14;display:grid;place-content:center;text-align:center;transform:rotate(12deg);font:900 13px/1 var(--display);font-stretch:120%;text-transform:uppercase}
+.badge b{display:block;font-size:30px;letter-spacing:-.02em}
+.stickers a,.stickers button{border:2px solid var(--text);background:var(--paper);padding:6px 11px 5px;font:600 12px var(--mono);text-decoration:none;cursor:pointer}
+.stickers a{transform:rotate(-3deg)} .stickers button{transform:rotate(2deg)}
+
+/* the poster */
+.poster{position:relative;padding:118px 0 0;overflow-x:clip;overflow-y:visible}
+h1{position:relative;margin:0;font:900 clamp(52px,13.2vw,176px)/.8 var(--display);font-stretch:130%;letter-spacing:-.035em;text-transform:uppercase;color:var(--blue);white-space:nowrap}
+h1 .ghost{position:absolute;inset:0;color:var(--pink);transform:translate(.035em,.025em);mix-blend-mode:var(--blend);pointer-events:none}
+h1 .l2{display:block;padding-left:.55em}
+.dots{position:absolute;left:-90px;top:120px;width:300px;height:300px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,var(--pink) 1.6px,transparent 2px) 0 0/9px 9px;opacity:.4;mix-blend-mode:var(--blend);z-index:-1}
+.spine{position:absolute;right:-4px;top:auto;bottom:0;writing-mode:vertical-rl;font:400 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.deck{margin:26px 0 0 auto;max-width:34em;font-size:18px;color:var(--soft);text-wrap:pretty;padding-right:24px}
+.deck b{color:var(--text)}
+
+/* the desk: a taped-on slip and a rubber stamp */
+.desk{position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));margin:46px 0 0;align-items:start}
+.slip{grid-column:1/9;grid-row:1;position:relative;background:var(--slip);padding:30px 30px 26px;transform:rotate(-1deg);box-shadow:0 1px 0 var(--rule)}
+.slip::before,.slip::after{content:"";position:absolute;top:-14px;width:110px;height:30px;opacity:.75;mix-blend-mode:var(--blend)}
+.slip::before{left:26px;background:var(--pink);transform:rotate(-6deg)} .slip::after{right:34px;background:var(--blue);transform:rotate(5deg)}
+.hand{font:700 30px/1 var(--hand);color:var(--pink-ink);margin:0 0 12px}
+.slip textarea{display:block;width:100%;min-height:236px;resize:vertical;border:0;padding:0 2px;background:transparent repeating-linear-gradient(transparent 0 31px,var(--rule) 31px 32px);
+  font:400 18px/32px var(--body);color:var(--text)}
+.slip textarea::placeholder{color:var(--faint)}
+.slip textarea:focus-visible{outline-offset:6px}
+.strips{display:flex;flex-wrap:wrap;gap:10px 12px;margin-top:20px;align-items:center}
+.strips span{font:700 22px var(--hand);color:var(--soft)}
+.strip{border:0;cursor:pointer;padding:8px 16px 7px;background:var(--paper);font:700 14px var(--body);transform:rotate(var(--r,0deg));
+  clip-path:polygon(2% 0,98% 6%,100% 52%,97% 100%,3% 94%,0 48%);transition:transform .2s cubic-bezier(.22,1,.36,1),background .15s}
+.strip:hover{transform:rotate(0deg) translateY(-2px)}
+.strip[aria-pressed="true"]{background:var(--pink);color:#1a0b14}
+.strip small{font:400 12px var(--mono);opacity:.85}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:22px}
+.go{border:3px solid var(--text);background:transparent;color:var(--text);cursor:pointer;padding:10px 18px;font:900 20px var(--display);font-stretch:125%;text-transform:uppercase;transform:rotate(-1.5deg);transition:transform .12s,background .12s}
+.go:hover{background:var(--text);color:var(--paper)}
+.go:active{transform:rotate(-1.5deg) scale(.97)}
+.go:disabled{opacity:.5;cursor:wait}
+.engine{flex:1;min-width:14em;margin:0;font:400 12.5px/1.6 var(--mono);color:var(--soft)}
+.load{height:4px;background:var(--rule);margin-top:4px;overflow:hidden}
+.load i{display:block;height:100%;background:var(--blue);transform-origin:left;transform:scaleX(0);transition:transform .3s}
+
+.stampbox{grid-column:8/13;grid-row:1;margin-top:120px;margin-left:-30px;position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
+.stamp{width:min(330px,100%);aspect-ratio:1;transform:rotate(var(--sr,-9deg));transition:transform .35s cubic-bezier(.22,1,.36,1),opacity .2s;color:var(--faint);filter:url(#ink)}
+.stamp.pos{color:var(--blue)} .stamp.neg{color:var(--pink)}
+.stamp.idle{opacity:.55}
+.stamp.thump{animation:thump .38s cubic-bezier(.22,1,.36,1)}
+@keyframes thump{0%{transform:rotate(var(--sr)) scale(1.35);opacity:0}60%{opacity:1}100%{transform:rotate(var(--sr)) scale(1)}}
+.stamp text{fill:currentColor}
+.stamp .word{font:900 46px var(--display);font-stretch:118%;letter-spacing:-.01em;text-transform:uppercase}
+.stamp .ring{font:600 13px var(--mono);letter-spacing:.18em;text-transform:uppercase}
+.stamp .pct{font:600 19px var(--mono)}
+.sure{margin:6px 0 0;text-align:center;font-size:15px;color:var(--soft);max-width:22em}
+
+/* the marked-up review */
+.markup{margin:84px 0 0;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,9fr);gap:28px}
+.markup aside h2{font:900 46px/.88 var(--display);font-stretch:120%;text-transform:uppercase;margin:0;transform:rotate(-2deg);transform-origin:left}
+.markup aside p{font-size:14.5px;color:var(--soft);margin:16px 0 0}
+.key{display:flex;flex-direction:column;gap:6px;margin-top:14px;font:400 12px var(--mono);color:var(--soft)}
+.key span{display:flex;gap:8px;align-items:center}
+.key i{width:30px;height:12px;display:inline-block}
+.typeset{font:400 clamp(20px,2.3vw,27px)/1.7 var(--body);margin:0;white-space:pre-wrap;border-left:3px solid var(--text);padding-left:26px}
+.typeset mark{color:inherit;background:transparent;padding:.06em .1em;-webkit-box-decoration-break:clone;box-decoration-break:clone;cursor:help}
+.typeset mark.pos{background:color-mix(in srgb,var(--blue) calc(var(--a,.3) * 100%),transparent)}
+.typeset mark.neg{background:color-mix(in srgb,var(--pink) calc(var(--a,.3) * 100%),transparent)}
+.typeset mark.top{text-decoration:underline wavy var(--text);text-decoration-thickness:2px;text-underline-offset:6px}
+.typeset .note{display:inline-block;font:700 26px/1 var(--hand);color:var(--pink-ink);transform:rotate(-4deg);margin:0 6px;white-space:nowrap}
+.typeset .muted{color:var(--faint)}
+
+/* the scoreboard: a dot plot with 95% intervals */
+.board{margin:96px 0 0;padding-top:30px;border-top:3px solid var(--text)}
+.board-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:14px 30px}
+.board h2{font:900 clamp(46px,7vw,92px)/.85 var(--display);font-stretch:128%;text-transform:uppercase;margin:0;color:var(--pink-ink)}
+.board .sub{margin:0;max-width:30em;color:var(--soft);font-size:15px}
+.plot{margin-top:28px;position:relative}
+.axis,.prow{display:grid;grid-template-columns:minmax(150px,280px) minmax(0,1fr);gap:16px;align-items:center}
+.prow{min-height:46px;border-bottom:1px solid var(--rule)}
+.prow .name{font:500 15px/1.2 var(--body)}
+.prow .name small{display:block;color:var(--soft);font-size:12.5px}
+.track{position:relative;height:46px;margin-right:110px}
+.track .ci{position:absolute;top:50%;height:2px;margin-top:-1px;background:var(--faint);border-radius:1px}
+.track .dot{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);box-shadow:0 0 0 2px var(--paper)}
+.prow.win .dot{width:20px;height:20px;margin:-10px 0 0 -10px;background:var(--blue)}
+.track .val{position:absolute;top:50%;transform:translate(14px,-50%);font:600 13px var(--mono);white-space:nowrap}
+.prow.win .val{color:var(--blue)}
+.axis{margin-top:4px}
+.ticks{position:relative;height:22px;font:400 12px var(--mono);color:var(--soft);margin-right:110px}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.offchart{font-size:13.5px;color:var(--soft);margin:12px 0 0}
+.tip{position:fixed;z-index:8;pointer-events:none;background:var(--text);color:var(--paper);font:400 12.5px/1.45 var(--mono);padding:8px 10px;max-width:260px;opacity:0;transition:opacity .12s;white-space:pre-line}
+
+.pair{margin-top:56px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:36px;align-items:start}
+.pair h3{font:900 30px/.95 var(--display);font-stretch:118%;text-transform:uppercase;margin:0 0 10px}
+.pair p{margin:0 0 12px;color:var(--soft);font-size:15px;text-wrap:pretty}
+.legend{display:flex;gap:18px;font:400 12px var(--mono);color:var(--soft);margin-bottom:6px}
+.legend span{display:inline-flex;gap:7px;align-items:center}
+.legend i{width:13px;height:13px;border-radius:50%;display:inline-block}
+.legend .short{background:var(--c-short)} .legend .long{border:3px solid var(--c-long)}
+.db .prow{grid-template-columns:minmax(110px,170px) minmax(0,1fr)}
+.db .axis{grid-template-columns:minmax(110px,170px) minmax(0,1fr)}
+.db .dot.s{background:var(--c-short)} .db .dot.l{background:var(--paper);border:3px solid var(--c-long);box-shadow:none}
+.db .link{position:absolute;top:50%;height:2px;margin-top:-1px;background:var(--faint)}
+.db .val{font-size:12.5px}
+.db .track,.db .ticks{margin-right:128px}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;margin-top:56px}
+.notes h3{font:700 28px/1 var(--hand);color:var(--pink-ink);margin:0 0 6px}
+.notes p{margin:0;color:var(--soft);font-size:15px;text-wrap:pretty}
+details{margin-top:40px}
+summary{cursor:pointer;font:600 13px var(--mono);color:var(--soft);padding:6px 0}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px}
+table{width:100%;border-collapse:collapse;min-width:640px;font-size:14px}
+th{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--soft);text-align:right;padding:8px 10px;border-bottom:2px solid var(--text)}
+td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--rule);font:400 13.5px var(--mono)}
+th:first-child,td:first-child{text-align:left;padding-left:0}
+td:first-child{font:500 14.5px var(--body)}
+
+/* colophon */
+.colophon{margin:90px 0 0;padding:26px 0 46px;border-top:3px solid var(--text);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:28px;font-size:13.5px;color:var(--soft)}
+.colophon b{display:block;font:900 22px var(--display);font-stretch:125%;text-transform:uppercase;color:var(--text);margin-bottom:6px}
+.colophon p{margin:0 0 8px}
+
+@media (max-width:900px){
+  .desk{grid-template-columns:1fr}
+  .slip{grid-column:1;grid-row:1}
+  .stampbox{grid-column:1;grid-row:2;margin:-30px 0 0;justify-self:end;width:min(300px,80%)}
+  .markup{grid-template-columns:1fr;gap:18px}
+  .pair{grid-template-columns:1fr}
+  .notes{grid-template-columns:1fr}
+  .colophon{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .page-w{padding:0 16px}
+  .stickers{right:16px;top:10px}
+  .badge{width:64px;height:64px;font-size:10px} .badge b{font-size:22px}
+  .stickers a{display:none}
+  .poster{padding-top:92px}
+  .spine{display:none}
+  .deck{padding-right:0}
+  .slip{padding:26px 18px 22px}
+  .axis,.prow,.db .prow,.db .axis{grid-template-columns:minmax(0,96px) minmax(0,1fr);gap:10px}
+  .track,.ticks{margin-right:64px}
+  .prow .name{font-size:13.5px}
+  .prow .name small{display:none}
+  .typeset{padding-left:16px}
+  .board h2{font-size:38px;font-stretch:112%}
+  .desk{overflow-x:clip;overflow-y:visible;padding:16px 4px 0;margin-top:30px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#review">Skip to the review slip</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="ink"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 1 1 1 1 1 0.4 1"/></feComponentTransfer><feComposite in="SourceGraphic" operator="in"/></filter></svg>
+<div class="page-w">
+  <div class="stickers">
+    <a href="https://github.com/evannwilsonn/verdict">source</a>
+    <button id="theme" type="button" aria-label="Switch colour theme">ink: dark</button>
+    <div class="badge" aria-hidden="true"><span>issue</span><b>07</b></div>
+  </div>
+
+  <header class="poster">
+    <div class="dots" aria-hidden="true"></div>
+    <h1 aria-label="Verdict: did they like it?">Did they<span class="l2">like it?</span><span class="ghost" aria-hidden="true">Did they<span class="l2">like it?</span></span></h1>
+    <div class="spine" aria-hidden="true">Verdict · a zine about whether they liked it</div>
+    <p class="deck">Hand in any movie review. A DistilBERT model reads it <b>in your browser</b>, stamps a verdict on it, and marks up the sentences that decided it. Never trained on IMDB, it gets <b id="dHead">–</b> of 25,000 IMDB reviews right on its own, and <b id="dAcc">–</b> with a small word-counting model trained on IMDB beside it.</p>
+  </header>
+
+  <main>
+    <section class="desk" aria-label="Your review and the verdict">
+      <div class="slip">
+        <p class="hand"><label for="review">hand in a review →</label></p>
+        <textarea id="review" placeholder="Paste or type a review. A few sentences is plenty."></textarea>
+        <div class="strips" role="group" aria-label="Sample reviews">
+          <span>or tear off one of these:</span>
+          <button type="button" class="strip" style="--r:-2deg" data-sample="rave">a rave</button>
+          <button type="button" class="strip" style="--r:1.5deg" data-sample="pan">a pan</button>
+          <button type="button" class="strip" style="--r:-.8deg" data-sample="mixed">a mixed one</button>
+          <button type="button" class="strip" style="--r:2.2deg" data-sample="sarcasm">sarcasm <small>(fools it)</small></button>
+        </div>
+        <div class="actions">
+          <button class="go" id="go" type="button">Stamp it</button>
+          <div class="engine"><span id="engine" aria-live="polite">The model downloads once (about 67 MB) the first time you stamp a review.</span><div class="load" aria-hidden="true"><i id="loadbar"></i></div></div>
+        </div>
+      </div>
+
+      <div class="stampbox" aria-live="polite">
+        <svg class="stamp idle" id="stamp" viewBox="0 0 300 300" role="img" aria-labelledby="stampText">
+          <title id="stampText">No verdict yet</title>
+          <defs><path id="ringPath" d="M150,150 m-118,0 a118,118 0 1,1 236,0 a118,118 0 1,1 -236,0"/></defs>
+          <circle cx="150" cy="150" r="140" fill="none" stroke="currentColor" stroke-width="7"/>
+          <circle cx="150" cy="150" r="98" fill="none" stroke="currentColor" stroke-width="3"/>
+          <text class="ring"><textPath href="#ringPath" startOffset="0">the verdict · issue 07 · the verdict · issue 07 ·</textPath></text>
+          <text class="word" id="w1" x="150" y="148" text-anchor="middle">Not yet</text>
+          <text class="word" id="w2" x="150" y="192" text-anchor="middle" style="font-size:40px"></text>
+          <text class="pct" id="pct" x="150" y="228" text-anchor="middle"></text>
+        </svg>
+        <p class="sure" id="sure"></p>
+      </div>
+    </section>
+
+    <section class="markup" aria-labelledby="hMark">
+      <aside>
+        <h2 id="hMark">Marked up</h2>
+        <p>Each sentence is taken out in turn and the review is read again. Ink shows how far the verdict moved without it.</p>
+        <div class="key"><span><i style="background:var(--blue)"></i>pulled toward "liked it"</span><span><i style="background:var(--pink)"></i>pulled toward "didn't"</span><span>darker ink = bigger pull</span></div>
+      </aside>
+      <p class="typeset" id="page"><span class="muted">Your review comes back here, marked up.</span></p>
+    </section>
+
+    <section class="board" id="tested" aria-labelledby="hBoard">
+      <div class="board-head">
+        <h2 id="hBoard">The scoreboard</h2>
+        <p class="sub" id="boardSub">Accuracy on IMDB's 25,000 test reviews, half positive and half negative. Lines show the 95% interval. Every choice was made on 2,000 held-out training reviews first; the test set was scored once.</p>
+      </div>
+      <div class="plot" id="plot" role="img" aria-describedby="boardSub"></div>
+      <p class="offchart" id="offchart"></p>
+
+      <div class="pair">
+        <div>
+          <h3>Long reviews</h3>
+          <p id="nLong"></p>
+          <p>Hollow pink rings are reviews over the model's 512-token window; solid blue dots are the rest.</p>
+        </div>
+        <div>
+          <div class="legend"><span><i class="short"></i>short reviews</span><span><i class="long"></i>long reviews</span></div>
+          <div class="plot db" id="dbplot" role="img" aria-label="Accuracy on short and long reviews for each model"></div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <div><h3>two different readers</h3><p id="nBlend"></p></div>
+        <div><h3>is the gap real?</h3><p id="nSig"></p></div>
+        <div><h3>where it still fails</h3><p>Sarcasm. "Truly the cinematic event of the decade" reads as praise to a model that has learned praise words. Try the sarcasm strip above.</p></div>
+      </div>
+
+      <details>
+        <summary>Show the scoreboard as a table</summary>
+        <div class="tablewrap">
+          <table id="results"><thead><tr><th scope="col">Model</th><th scope="col">Accuracy</th><th scope="col">95% interval</th><th scope="col">F1</th><th scope="col">Short reviews</th><th scope="col">Long reviews</th></tr></thead><tbody></tbody></table>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <div><b>Colophon</b>Issue 07 of Evan Wilson's AI project run. <a href="https://github.com/evannwilsonn/verdict">Source and write-up</a>.</div>
+    <div>
+      <p>Set in Anybody, Karla, Martian Mono and Caveat. Two inks: riso blue and fluorescent pink. Printed with TypeScript and Transformers.js; the model runs in your browser and nothing you paste is sent anywhere.</p>
+      <p>Reviews from the Large Movie Review Dataset: Andrew L. Maas, Raymond E. Daly, Peter T. Pham, Dan Huang, Andrew Y. Ng and Christopher Potts, "Learning Word Vectors for Sentiment Analysis", ACL 2011. Model: DistilBERT fine-tuned on SST-2 (Apache 2.0). The sample reviews were written for this page.</p>
+    </div>
+  </footer>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script type="module">
+const SETTINGS = /*SETTINGS*/null;
+const RESULTS = /*RESULTS*/null;
+const BAYES = /*BAYES*/null; // pruned naive Bayes weights, only present when the blend is deployed
+
+const $ = id => document.getElementById(id);
+const SAMPLES = {
+  rave: "I went in expecting nothing and came out grinning. The two leads have real chemistry, and the jokes actually land. The last twenty minutes are as tense as anything I've seen this year. Go see it on the biggest screen you can find.",
+  pan: "Two hours I will never get back. The plot makes no sense, the dialogue is wooden, and the twist is visible from the opening scene. Even the score is forgettable. I kept checking my watch.",
+  mixed: "The first half is gorgeous and patient, built around a career-best performance. Then it falls apart. The third act rushes, the villain turns into a cartoon, and the ending simply stops. Worth seeing once, maybe.",
+  sarcasm: "Oh, wonderful. Another sequel nobody asked for, with the same jokes, only louder. Truly the cinematic event of the decade. I laughed exactly once, when the credits started.",
+};
+
+// ---- the model: the same scoring as src/transformer.ts ----
+const MODEL_ID = "Xenova/distilbert-base-uncased-finetuned-sst-2-english";
+const BODY = 510;
+let tf = null, tok = null, model = null, loading = null;
+
+async function loadModel(){
+  if (model) return;
+  if (loading) return loading;
+  loading = (async () => {
+    $("engine").textContent = "Downloading the model (about 67 MB, once; your browser keeps it)…";
+    tf = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1");
+    const files = {};
+    const progress_callback = p => {
+      if (p.status === "progress" && p.total){ files[p.file] = [p.loaded, p.total];
+        const [l, t] = Object.values(files).reduce((a, [x, y]) => [a[0]+x, a[1]+y], [0, 0]);
+        $("loadbar").style.transform = `scaleX(${(l/t).toFixed(3)})`; }
+    };
+    tok = await tf.AutoTokenizer.from_pretrained(MODEL_ID, { progress_callback });
+    model = await tf.AutoModelForSequenceClassification.from_pretrained(MODEL_ID, { dtype: "q8", progress_callback });
+    $("loadbar").style.transform = "scaleX(1)";
+    $("engine").textContent = "DistilBERT (SST-2), 8-bit, running in this tab. Nothing you paste leaves your browser.";
+  })();
+  loading.catch(() => { loading = null; });
+  return loading;
+}
+async function run(body){
+  const ids = [101, ...body, 102];
+  const input_ids = new tf.Tensor("int64", BigInt64Array.from(ids.map(BigInt)), [1, ids.length]);
+  const attention_mask = new tf.Tensor("int64", new BigInt64Array(ids.length).fill(1n), [1, ids.length]);
+  const { logits } = await model({ input_ids, attention_mask });
+  return logits.data[1] - logits.data[0];
+}
+async function bertLogOdds(text){
+  const body = tok.encode(text, { add_special_tokens: false });
+  const strategy = SETTINGS.strategy;
+  if (body.length <= BODY || strategy === "head") return run(body.slice(0, BODY));
+  if (strategy === "headTail") return run([...body.slice(0, 128), ...body.slice(body.length - (BODY - 128))]);
+  const scores = [];
+  for (let start = 0; ; start += BODY/2){ scores.push(await run(body.slice(start, start + BODY))); if (start + BODY >= body.length) break; }
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+// naive Bayes, for the blend (mirrors src/bayes.ts)
+const NEGATORS = new Set(["not","no","never","nothing","nobody","none","neither","nor","cannot","without","hardly"]);
+function nbLogOdds(text){
+  if (!BAYES) return 0;
+  const toks = text.toLowerCase().replace(/n't\b/g, " not").match(/[a-z0-9]+(?:'[a-z]+)?|[.!?,;:]/g) ?? [];
+  const words = []; let negated = false;
+  for (const t of toks){ if (/^[.!?,;:]$/.test(t)){ negated = false; continue; } words.push(BAYES.options.negation && negated ? "NOT_" + t : t); if (BAYES.options.negation && NEGATORS.has(t)) negated = true; }
+  let fs = words.slice();
+  if (BAYES.options.bigrams) for (let i = 1; i < words.length; i++) fs.push(words[i-1] + " " + words[i]);
+  if (BAYES.options.binary) fs = [...new Set(fs)];
+  let s = BAYES.prior; for (const f of fs) s += BAYES.weights[f] ?? 0;
+  return s;
+}
+// The deployed score: positive means "liked it". It already includes the chosen threshold.
+async function score(text){
+  const b = await bertLogOdds(text);
+  if (SETTINGS.final === "blend") return b + SETTINGS.blend.weight * nbLogOdds(text) - SETTINGS.blend.threshold;
+  if (SETTINGS.final === "threshold") return b - SETTINGS.threshold;
+  return b;
+}
+
+// ---- the stamp and the markup ----
+function sentences(text){
+  const out = [], re = /[^.!?\n]+(?:[.!?]+["')\]]*|\n+|$)\s*/g; let m;
+  while ((m = re.exec(text)) && m[0]) out.push(m[0]);
+  return out.length ? out : [text];
+}
+function stampIt(z){
+  const p = 1/(1+Math.exp(-z)), sure = z >= 0 ? p : 1 - p;
+  const [a, b] = z >= 0 ? (p > .9 ? ["Loved", "it"] : ["Liked", "it"]) : (p < .1 ? ["Hated", "it"] : ["Didn't", "like it"]);
+  const s = $("stamp");
+  s.classList.remove("idle", "pos", "neg", "thump"); void s.getBoundingClientRect();
+  s.classList.add(z >= 0 ? "pos" : "neg", "thump");
+  s.style.setProperty("--sr", ((z >= 0 ? -8 : 7) + (Math.random()*6 - 3)).toFixed(1) + "deg");
+  $("w1").textContent = a; $("w2").textContent = b;
+  const pct = sure > .999 ? ">99.9% sure" : (sure*100).toFixed(1) + "% sure";
+  $("pct").textContent = pct; $("stampText").textContent = `${a} ${b}, ${pct}`;
+  $("sure").textContent = sure < .7 ? "Close to a coin flip: read this one as mixed." : "";
+}
+
+let busy = false;
+async function judge(){
+  const text = $("review").value.trim();
+  if (!text || busy) return;
+  busy = true; $("go").disabled = true;
+  try {
+    await loadModel();
+    const z = await score(text);
+    stampIt(z);
+    // Occlusion: drop one sentence at a time and see how far the score moves.
+    const parts = sentences(text);
+    const page = $("page"); page.innerHTML = "";
+    const marks = parts.map(s => { const m = document.createElement("mark"); m.textContent = s; page.append(m); return m; });
+    if (parts.length > 1){
+      const deltas = [];
+      for (let i = 0; i < parts.length; i++){
+        const without = parts.filter((_, j) => j !== i).join("").trim();
+        deltas.push(without ? z - await score(without) : 0);
+      }
+      const max = Math.max(...deltas.map(Math.abs), 1e-6), top = deltas.map(Math.abs).indexOf(max);
+      deltas.forEach((d, i) => {
+        const m = marks[i]; m.className = (d >= 0 ? "pos" : "neg") + (i === top ? " top" : "");
+        m.style.setProperty("--a", (0.12 + 0.58*Math.abs(d)/max).toFixed(2));
+        m.title = `Without this sentence the score moves ${d >= 0 ? "down" : "up"} by ${Math.abs(d).toFixed(2)} (log-odds)`;
+      });
+      const note = document.createElement("span"); note.className = "note"; note.textContent = "← this decided it";
+      marks[top].after(note);
+    } else {
+      marks[0].className = z >= 0 ? "pos" : "neg"; marks[0].style.setProperty("--a", ".3");
+      marks[0].title = "One sentence: it carries the whole verdict.";
+    }
+  } catch (e) {
+    $("engine").textContent = "The model couldn't load here (" + (e?.message || e) + "). The GitHub Pages version, linked under source, runs it.";
+  } finally { busy = false; $("go").disabled = false; }
+}
+$("go").addEventListener("click", judge);
+$("review").addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) judge(); });
+document.querySelectorAll("[data-sample]").forEach(b => b.addEventListener("click", () => {
+  $("review").value = SAMPLES[b.dataset.sample];
+  document.querySelectorAll("[data-sample]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  judge();
+}));
+$("review").addEventListener("input", () => document.querySelectorAll("[data-sample]").forEach(x => x.setAttribute("aria-pressed","false")));
+
+// ---- the scoreboard ----
+const pct = x => x == null ? "–" : (x*100).toFixed(1) + "%";
+const final = RESULTS.find(r => r.name === SETTINGS.finalName);
+const shown = RESULTS.filter(r => r.name !== "Always positive");
+let lo = 0, hi = 1, step = 0.02;
+const X = v => ((v - lo) / (hi - lo) * 100).toFixed(2) + "%";
+function scale(values, by){ step = by; lo = Math.floor(Math.min(...values) / by) * by; hi = Math.ceil(Math.max(...values) / by) * by; }
+const tip = $("tip");
+function hover(el, text){
+  el.addEventListener("pointerenter", () => { tip.textContent = text; tip.style.opacity = 1; });
+  el.addEventListener("pointermove", e => { tip.style.left = Math.min(e.clientX + 14, innerWidth - 270) + "px"; tip.style.top = (e.clientY + 14) + "px"; });
+  el.addEventListener("pointerleave", () => { tip.style.opacity = 0; });
+}
+function axis(host){
+  const ax = document.createElement("div"); ax.className = "axis"; ax.append(document.createElement("span"));
+  const ticks = document.createElement("div"); ticks.className = "ticks";
+  for (let v = lo; v <= hi + 1e-9; v += step){ const s = document.createElement("span"); s.style.left = X(v); s.textContent = Math.round(v*100) + "%"; ticks.append(s); }
+  ax.append(ticks); host.append(ax);
+}
+function row(host, r, label, note){
+  const pr = document.createElement("div"); pr.className = "prow" + (r === final ? " win" : "");
+  const name = document.createElement("div"); name.className = "name"; name.textContent = label;
+  if (note){ const s = document.createElement("small"); s.textContent = note; name.append(s); }
+  const tr = document.createElement("div"); tr.className = "track";
+  pr.append(name, tr); host.append(pr); return tr;
+}
+(function plots(){
+  const plot = $("plot");
+  scale(shown.flatMap(r => [r.accuracyLow, r.accuracyHigh]), 0.01);
+  for (const r of shown){
+    const tr = row(plot, r, r.name, SETTINGS.rowNotes[r.name]);
+    const ci = document.createElement("i"); ci.className = "ci"; ci.style.left = X(r.accuracyLow); ci.style.width = `calc(${X(r.accuracyHigh)} - ${X(r.accuracyLow)})`;
+    const dot = document.createElement("i"); dot.className = "dot"; dot.style.left = X(r.accuracy);
+    const val = document.createElement("span"); val.className = "val"; val.style.left = X(r.accuracyHigh); val.textContent = pct(r.accuracy);
+    tr.append(ci, dot, val);
+    hover(tr, `${r.name}\naccuracy ${pct(r.accuracy)} (95% ${pct(r.accuracyLow)}–${pct(r.accuracyHigh)})\nF1 ${r.f1.toFixed(3)}`);
+  }
+  axis(plot);
+  const always = RESULTS.find(r => r.name === "Always positive");
+  $("offchart").textContent = `Off the chart to the left: calling every review positive scores ${pct(always.accuracy)}.`;
+
+  const db = $("dbplot");
+  const short = n => n.replace(/^Blend: .*/, "Blend").replace(", tuned threshold", ", tuned").replace(" (default)", "");
+  const split = shown.filter(r => r.longAccuracy != null && r.shortAccuracy != null);
+  if (split.length) scale(split.flatMap(r => [r.longAccuracy, r.shortAccuracy]), 0.02);
+  for (const r of split){
+    const tr = row(db, r, short(r.name));
+    const [a, b] = [r.longAccuracy, r.shortAccuracy];
+    const link = document.createElement("i"); link.className = "link"; link.style.left = X(Math.min(a, b)); link.style.width = `calc(${X(Math.max(a, b))} - ${X(Math.min(a, b))})`;
+    const l = document.createElement("i"); l.className = "dot l"; l.style.left = X(a);
+    const s = document.createElement("i"); s.className = "dot s"; s.style.left = X(b);
+    const val = document.createElement("span"); val.className = "val"; val.style.left = X(Math.max(a, b)); val.textContent = `${pct(a)} → ${pct(b)}`;
+    tr.append(link, l, s, val);
+    hover(tr, `${r.name}\nlong reviews ${pct(a)} (${(r.longN ?? 0).toLocaleString("en-US")})\nshort reviews ${pct(b)} (${(r.shortN ?? 0).toLocaleString("en-US")})`);
+  }
+  if (!db.children.length){ db.innerHTML = '<p class="offchart">The long/short split appears when the test run finishes.</p>'; } else axis(db);
+
+  const tb = document.querySelector("#results tbody");
+  for (const r of RESULTS){
+    const tr = document.createElement("tr");
+    for (const v of [r.name, pct(r.accuracy), `${pct(r.accuracyLow)}–${pct(r.accuracyHigh)}`, r.f1.toFixed(3), pct(r.shortAccuracy), pct(r.longAccuracy)]){ const td = document.createElement("td"); td.textContent = v; tr.append(td); }
+    tb.append(tr);
+  }
+  $("dAcc").textContent = pct(final.accuracy);
+  $("dHead").textContent = pct(RESULTS.find(r => r.name.startsWith("DistilBERT, head")).accuracy);
+  $("nLong").textContent = SETTINGS.notes.long;
+  $("nBlend").textContent = SETTINGS.notes.blend;
+  $("nSig").textContent = SETTINGS.notes.sig;
+  if (SETTINGS.preview) $("boardSub").textContent = SETTINGS.preview;
+})();
+
+// theme toggle (remembered per browser when storage is available)
+(function(){
+  const root = document.documentElement, btn = $("theme"), mq = matchMedia("(prefers-color-scheme: dark)");
+  const dark = () => root.dataset.theme ? root.dataset.theme==="dark" : mq.matches;
+  const label = () => { btn.textContent = dark() ? "ink: light" : "ink: dark"; };
+  try { const s = localStorage.getItem("verdict-theme"); if (s) root.dataset.theme = s; } catch(e){}
+  label();
+  btn.addEventListener("click", () => { root.dataset.theme = dark() ? "light" : "dark"; try { localStorage.setItem("verdict-theme", root.dataset.theme); } catch(e){} label(); });
+  if (mq.addEventListener) mq.addEventListener("change", label);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+[
+  {
+    "weight": 0,
+    "threshold": -0.977,
+    "accuracy": 0.8925
+  },
+  {
+    "weight": 0.01,
+    "threshold": -2.7475,
+    "accuracy": 0.8955
+  },
+  {
+    "weight": 0.02,
+    "threshold": -2.7982,
+    "accuracy": 0.9005
+  },
+  {
+    "weight": 0.03,
+    "threshold": -1.5767,
+    "accuracy": 0.903
+  },
+  {
+    "weight": 0.05,
+    "threshold": -2.4492,
+    "accuracy": 0.907
+  },
+  {
+    "weight": 0.075,
+    "threshold": -3.196,
+    "accuracy": 0.9085
+  },
+  {
+    "weight": 0.1,
+    "threshold": -2.0743,
+    "accuracy": 0.9125
+  },
+  {
+    "weight": 0.15,
+    "threshold": -1.9299,
+    "accuracy": 0.915
+  },
+  {
+    "weight": 0.2,
+    "threshold": -3.3365,
+    "accuracy": 0.912
+  },
+  {
+    "weight": 0.3,
+    "threshold": -1.8288,
+    "accuracy": 0.9095
+  },
+  {
+    "weight": 0.5,
+    "threshold": 0.1031,
+    "accuracy": 0.9045
+  }
+]
